@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+<!-- 原始地址：//webapi.amap.com/ui/1.0/ui/misc/PathSimplifier/examples/expand-path.html -->
+<base href="http://webapi.amap.com/ui/1.0/ui/misc/PathSimplifier/examples/" />
+<meta charset="utf-8">
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no, width=device-width">
+<title>动态延展路径</title>
+<style>
+html,
+body,
+#container {
+width: 100%;
+height: 100%;
+margin: 0px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="container"></div>
+<script type="text/javascript" src='//webapi.amap.com/maps?v=1.4.6&key=您申请的key值'></script>
+<!-- UI组件库 1.0 -->
+<script src = "G:/Qt/study/demo3/qwebchannel.js"></script>
+<script src="//webapi.amap.com/ui/1.0/main.js?v=1.0.11"></script>
+<script type="text/javascript">
+
+var myPath = new Array();
+var map;
+var endIdx = 0;
+new QWebChannel(qt.webChannelTransport, function(channel) {
+window.bridge = channel.objects.coc;
+
+bridge.sigSendMessageToJs.connect(function(mypath){
+if(mypath){
+myPath.push([mypath.lng,mypath.lat]);
+}
+if(myPath[1]){
+alert("ss");
+AMapUI.load(['ui/misc/PathSimplifier', 'lib/$'], function(PathSimplifier, $) {
+
+if (!PathSimplifier.supportCanvas) {
+alert('当前环境不支持 Canvas！');
+return;
+}
+
+var pathSimplifierIns = new PathSimplifier({
+zIndex: 100,
+autoSetFitView: false,
+map: map, //所属的地图实例
+
+getPath: function(pathData, pathIndex) {
+
+return pathData.path;
+},
+getHoverTitle: function(pathData, pathIndex, pointIndex) {
+
+if (pointIndex >= 0) {
+//point
+return pathData.name + '，点：' + pointIndex + '/' + pathData.path.length;
+}
+
+return pathData.name + '，点数量' + pathData.path.length;
+},
+renderOptions: {
+
+renderAllPointsIfNumberBelow: 100 //绘制路线节点，如不需要可设置为-1
+}
+});
+
+window.pathSimplifierIns = pathSimplifierIns;
+
+
+data = [{
+name: '动态路线',
+path: myPath.slice(0, 1)
+}];
+
+pathSimplifierIns.setData(data);
+
+//对第一条线路（即索引 0）创建一个巡航器
+var navg1 = pathSimplifierIns.createPathNavigator(0, {
+loop: true, //循环播放
+speed: 1000 //巡航速度，单位千米/小时
+});
+
+
+
+function doExpand() {
+
+endIdx++;
+
+
+var cursor = navg1.getCursor().clone(), //保存巡航器的位置
+status = navg1.getNaviStatus();
+
+
+data[0].path = myPath.slice(0, endIdx + 1);
+pathSimplifierIns.setData(data); //延展路径
+
+//重新建立一个巡航器
+navg1 = pathSimplifierIns.createPathNavigator(0, {
+//loop: true, //循环播放
+speed: 600000 //巡航速度，单位千米/小时
+});
+
+
+
+//恢复巡航器的位置
+if (cursor.idx >= 0) {
+navg1.moveToPoint(cursor.idx, cursor.tail);
+}
+
+
+
+navg1.start();
+}
+
+doExpand();
+});
+}
+});
+
+});
+
+//if(endIdx == 0){
+map = new AMap.Map('container', {
+zoom: 4,
+center:myPath[0]
+});
+//}
+
+
+</script>
+</body>
+
+</html>
